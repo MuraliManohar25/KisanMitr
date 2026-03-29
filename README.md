@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Fair-Trade Quality Scanner (KisanMitr)
 
 A computer vision-powered web application that empowers small-scale farmers to objectively assess crop quality, generate professional certificates, and gain fair-trade credibility.
@@ -148,3 +149,6 @@ MIT
 ## 🤝 Contributing
 
 Contributions welcome! Please open an issue or submit a pull request.
+=======
+# KisanMitr
+>>>>>>> 06ca23ec3b2273ef4af36b8c057df130b9d14a1a
