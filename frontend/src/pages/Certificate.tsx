@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Download, AlertTriangle } from 'lucide-react';
 import { getAnalysis } from '../services/api';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
