@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, BarChart3, Database } from 'lucide-react';
-import { api } from '../services/api';
 
 export default function Admin() {
   const [stats, setStats] = useState({ total: 0, today: 0, gradeA: 0, gradeB: 0 });
