@@ -3,5 +3,4 @@ builder = "NIXPACKS"
 buildCommand = "npm install && npm run build"
 
 [deploy]
-startCommand = "./node_modules/.bin/serve -s build -l $PORT"
-restartPolicyType = "ON_FAILURE"
+startCommand = "./node_modules/.bin/serve -s dist -l $PORT"
