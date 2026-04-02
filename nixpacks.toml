@@ -1,8 +1,11 @@
 [phases.install]
-cmds = ["npm install"]
+dependsOn = ['setup']
+cmds = ['npm install']
+paths = ['/app/node_modules/.bin']
 
 [phases.build]
-cmds = ["npm run build"]
+dependsOn = ['install']
+cmds = ['npm run build']
 
 [start]
-cmd = "./node_modules/.bin/serve -s dist -l $PORT"
+cmd = './node_modules/.bin/serve -s dist -l $PORT'
