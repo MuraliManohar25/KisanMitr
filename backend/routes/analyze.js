@@ -116,11 +116,15 @@ router.post('/', upload.single('image'), async (req, res, next) => {
       ...gradedResults,                                    // overallGrade, gradeDistribution, detectionResults
     });
 
+// ✅ new — guarantee analysisId is always in response
 router.get('/:analysisId', async (req, res, next) => {
   try {
     const analysis = await AnalysisModel.findByAnalysisId(req.params.analysisId);
     if (!analysis) return res.status(404).json({ error: 'Analysis not found' });
-    res.json(analysis);
+    res.json({
+      analysisId: analysis.analysisId ?? req.params.analysisId,  // fallback
+      ...analysis
+    });
   } catch (error) {
     next(error);
   }
