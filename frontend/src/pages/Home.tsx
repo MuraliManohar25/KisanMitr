@@ -36,7 +36,9 @@ export default function Home() {
 
       const response = await uploadImage(formData);
       toast.success(t('analysis_complete'));
-      navigate(`/results/${response.data.analysisId}`);
+      
+      const analysisId = response.data.analysisId ?? (response.data as any).analysisId;
+      navigate(`/results/${analysisId}`);
     } catch (error) {
       toast.error(t('analysis_failed'));
       console.error(error);
