@@ -97,32 +97,48 @@ export interface RegisterPayload {
 }
 
 export interface DetectionResult {
-  analysisId?: string;
-  filename: string;
-  count: number;
-  label_summary: Record<string, number>;
-  avg_confidence: number;
-  grade: string;
-  score: number;
-  reason: string;
-  detections: {
-    label: string;
-    confidence: number;
-    bbox: { x1: number; y1: number; x2: number; y2: number };
-  }[];
-  inference_time_sec: number;
-}
-
-export interface AnalysisResult {
   analysisId: string;
-  status: string;
-  cropType?: string;
-  farmerInfo?: {
-    name?: string;
-    location?: string;
+  cropType: string;
+  farmerInfo: {
+    name: string;
+    location: string;
     phone?: string;
   };
-  result?: DetectionResult;
+  imageUrl: string;
+  detectionResults: {
+    totalCount: number;
+    items: Array<{
+      id: number;
+      diameter: number;
+      grade: string;
+      healthStatus?: string;
+      colorProfile: { avgRGB: number[]; dominantHue: number };
+    }>;
+  };
+  overallGrade: string;
+  gradeDistribution: { A: number; B: number; C: number; Reject: number };
+  certificateHash: string;
+  createdAt: string;
+  diseaseDetected?: string;
+  recommendations?: {
+    grade_advice: string;
+    storage?: string;
+    fertilizer?: string;
+    disease_note?: string;
+    pesticides?: {
+      organic: string;
+      chemical: string;
+      advice: string;
+    };
+  };
+  similarImages?: string[] | null;
+  datasetInfo?: {
+    totalTrainingImages: number;
+  } | null;
+}
+
+export interface AnalysisResult extends DetectionResult {
+  status?: string;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
