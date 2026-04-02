@@ -10,6 +10,11 @@ import imageComparison from '../services/imageComparison.js';
 import AnalysisModel from '../models/Analysis.js';
 import recommendationService from '../services/recommendationService.js';
 import crypto from 'crypto';
+import axios from 'axios';
+import FormData from 'form-data';
+import fsSync from 'fs';
+
+const YOLO_API = "https://muralimanohar25-kisanmitr.hf.space/detect";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,9 +43,16 @@ router.post('/', upload.single('image'), async (req, res, next) => {
       .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 90 })
       .toFile(processedPath);
+    // 2. YOLO Detection (via API)
+    const form = new FormData();
+    form.append("image", fsSync.createReadStream(processedPath));
+    form.append("crop_type", cropType || "auto");
+    
+    const yoloResponse = await axios.post(YOLO_API, form, {
+      headers: form.getHeaders()
+    });
 
-    // 2. YOLO Detection
-    const detections = await yoloService.detectObjects(processedPath, cropType || 'auto');
+    const detections = yoloResponse.data;
 
     // Auto-detect crop type logic
     if (!cropType || cropType === 'auto') {
