@@ -42,7 +42,7 @@ router.post('/', upload.single('image'), async (req, res, next) => {
     // 2. YOLO Detection
     const detections = await yoloService.detectObjects(processedPath, cropType || 'auto');
 
-    // Auto-detect crop type logic
+    // Auto-detect crop type
     if (!cropType || cropType === 'auto') {
       cropType = detections.detectedCropType || 'tomato';
       console.log(`🤖 Auto-detected crop: ${cropType}`);
@@ -60,9 +60,8 @@ router.post('/', upload.single('image'), async (req, res, next) => {
     // 4. Grading
     const gradedResults = await gradingEngine.grade(detections, cropType);
 
-    // 5. Detect Health Issues (Aggregate)
+    // 5. Detect Health Issues
     const detectedDisease = gradedResults.detectionResults.items.reduce((acc, item) => {
-      // If any item has a disease (not "Healthy"), flag it. 
       const healthStatus = item.healthStatus || 'Healthy';
       if (healthStatus !== 'Healthy' && healthStatus !== 'None') {
         if (acc === 'Rot') return acc;
@@ -83,7 +82,7 @@ router.post('/', upload.single('image'), async (req, res, next) => {
     const analysisId = `FTC-${new Date().getFullYear()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
     // 8. Save to DB
-    const analysis = await AnalysisModel.create({
+    await AnalysisModel.create({
       analysisId,
       userId: userId || null,
       cropType,
@@ -101,11 +100,11 @@ router.post('/', upload.single('image'), async (req, res, next) => {
     // 9. Cleanup original file (keep processed)
     await fs.unlink(imagePath).catch(console.error);
 
-    // ✅ new — analysisId explicitly at top, plus imageUrl and diseaseDetected for frontend
+    // 10. Respond
     res.json({
-      analysisId,                                          // for Home.tsx navigate
-      cropType,                                            // for Certificate.tsx
-      farmerInfo: { name: farmerName, location, phone },  // for Certificate.tsx + Results.tsx
+      analysisId,
+      cropType,
+      farmerInfo: { name: farmerName, location, phone },
       imageUrl: `/uploads/${path.basename(processedPath)}`,
       diseaseDetected: detectedDisease,
       recommendations,
@@ -113,16 +112,20 @@ router.post('/', upload.single('image'), async (req, res, next) => {
       datasetInfo: similarImages ? {
         totalTrainingImages: similarImages.totalTrainingImages
       } : null,
-      ...gradedResults,                                    // overallGrade, gradeDistribution, detectionResults
+      ...gradedResults,
     });
 
-// ✅ new — guarantee analysisId is always in response
+  } catch (error) {       // ← was missing
+    next(error);          // ← was missing
+  }                       // ← was missing
+});                       // ← was missing (router.post closing)
+
 router.get('/:analysisId', async (req, res, next) => {
   try {
     const analysis = await AnalysisModel.findByAnalysisId(req.params.analysisId);
     if (!analysis) return res.status(404).json({ error: 'Analysis not found' });
     res.json({
-      analysisId: analysis.analysisId ?? req.params.analysisId,  // fallback
+      analysisId: analysis.analysisId ?? req.params.analysisId,
       ...analysis
     });
   } catch (error) {
@@ -131,4 +134,3 @@ router.get('/:analysisId', async (req, res, next) => {
 });
 
 export default router;
-
