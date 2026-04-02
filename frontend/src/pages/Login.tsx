@@ -31,14 +31,15 @@ export default function Login() {
         toast.success('Login successful! 🎉');
         navigate('/');
       } else {
-        const response = await register(
-          formData.username,
-          formData.email,
-          formData.password,
-          formData.farmerName,
-          formData.location,
-          formData.phone
-        );
+        // ✅ new
+        const response = await register({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          farmerName: formData.farmerName,
+          location: formData.location,
+          phone: formData.phone
+        });
         setAuth(response.data.user, response.data.token);
         toast.success('Account created successfully! 🎉');
         navigate('/');
