@@ -1,0 +1,19 @@
+[phases.build]
+cmds = ["npm install", "npm run build"]
+
+[start]
+cmd = "caddy run --config /app/Caddyfile"
+
+```
+
+---
+
+**Your frontend repo root should now have these files:**
+```
+frontend/
+├── Caddyfile          ← new
+├── nixpacks.toml      ← new
+├── package.json
+├── vite.config.ts
+├── src/
+└── ...
