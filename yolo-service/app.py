@@ -1,13 +1,10 @@
 import os
-import io
-import tempfile
 import math
 import logging
 import time
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from ultralytics import YOLO
-from PIL import Image
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,11 +12,18 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-model = YOLO("yolov8n.pt")
+HF_SPACE_URL = os.environ.get(
+    "HF_SPACE_URL",
+    "https://muralimanohar25-kisanmitr.hf.space"
+)
+HF_SPACE_DETECT_ENDPOINT = f"{HF_SPACE_URL}/detect"
 
 MAX_FILE_SIZE_MB = 10
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "bmp"}
 ALLOWED_MIMETYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp"}
+
+# Timeout for calls to the HF Space (seconds): 30s connect, 120s read
+HF_TIMEOUT = (30, 120)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -65,43 +69,16 @@ def compute_grade(count: int, avg_confidence: float) -> dict:
     }
 
 
-def parse_detections(results, conf_threshold: float = 0.25) -> list:
-    detections = []
-    if not results.boxes:
-        return detections
-
-    for box in results.boxes:
-        conf = float(box.conf[0])
-        if conf < conf_threshold:
-            continue
-        cls_id = int(box.cls[0])
-        label = results.names.get(cls_id, f"class_{cls_id}")
-        x1, y1, x2, y2 = [round(float(v), 2) for v in box.xyxy[0]]
-        detections.append({
-            "label": label,
-            "confidence": round(conf, 4),
-            "bbox": {"x1": x1, "y1": y1, "x2": x2, "y2": y2}
-        })
-
-    detections.sort(key=lambda d: d["confidence"], reverse=True)
-    return detections
-
-
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"message": "YOLO API is running", "model": "yolov8n"})
+    return jsonify({"message": "YOLO API is running", "backend": "huggingface-space"})
 
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "model": "yolov8n"})
-
-
-@app.route("/classes", methods=["GET"])
-def classes():
-    return jsonify({"classes": model.names})
+    return jsonify({"status": "ok", "backend": "huggingface-space"})
 
 
 @app.route("/detect", methods=["POST"])
@@ -134,75 +111,73 @@ def detect():
     except ValueError:
         top_k = 0
 
-    # ── Read image via PIL (no temp file needed) ──────────────────────────────
-    try:
-        image = Image.open(io.BytesIO(image_file.read())).convert("RGB")
-    except Exception:
-        return jsonify({"error": "Could not decode image"}), 422
-
-    # ── Run inference ─────────────────────────────────────────────────────────
+    # ── Forward image to HF Space ─────────────────────────────────────────────
     start = time.perf_counter()
     try:
-        results = model(image, verbose=False)[0]
-    except Exception as e:
-        logger.error("Inference failed: %s", e)
-        return jsonify({"error": "Model inference error"}), 500
+        hf_response = requests.post(
+            HF_SPACE_DETECT_ENDPOINT,
+            files={"image": (image_file.filename, image_file.read(), image_file.mimetype)},
+            params={"conf": conf_threshold, "top_k": top_k},
+            timeout=HF_TIMEOUT,
+        )
+        hf_response.raise_for_status()
+    except requests.exceptions.Timeout:
+        logger.error("HF Space request timed out")
+        return jsonify({"error": "Detection service timed out"}), 504
+    except requests.exceptions.RequestException as e:
+        logger.error("HF Space request failed: %s", e)
+        return jsonify({"error": "Detection service unavailable"}), 502
     elapsed = round(time.perf_counter() - start, 3)
 
-    # ── Process results ───────────────────────────────────────────────────────
-    detections = parse_detections(results, conf_threshold)
+    # ── Parse HF Space response ───────────────────────────────────────────────
+    try:
+        hf_data = hf_response.json()
+    except Exception:
+        logger.error("HF Space returned non-JSON response")
+        return jsonify({"error": "Invalid response from detection service"}), 502
 
-    if top_k > 0:
-        detections = detections[:top_k]
+    # If the HF Space already returns the full structured payload, pass it
+    # through directly (adding elapsed time). If it returns a raw detections
+    # list we normalise it into the same envelope the backend expects.
+    if "detections" in hf_data:
+        detections = hf_data["detections"]
 
-    avg_conf = (
-        sum(d["confidence"] for d in detections) / len(detections)
-        if detections else 0.0
-    )
+        if top_k > 0:
+            detections = detections[:top_k]
 
-    grading = compute_grade(len(detections), avg_conf)
+        avg_conf = (
+            sum(d.get("confidence", 0) for d in detections) / len(detections)
+            if detections else 0.0
+        )
 
-    label_summary = {}
-    for d in detections:
-        label_summary[d["label"]] = label_summary.get(d["label"], 0) + 1
+        grading = compute_grade(len(detections), avg_conf)
 
-    logger.info("File='%s' detections=%d grade=%s time=%.3fs",
-                image_file.filename, len(detections), grading["grade"], elapsed)
+        label_summary = {}
+        for d in detections:
+            lbl = d.get("label", "unknown")
+            label_summary[lbl] = label_summary.get(lbl, 0) + 1
 
-    return jsonify({
-        "filename": image_file.filename,
-        "count": len(detections),
-        "label_summary": label_summary,
-        "avg_confidence": round(avg_conf, 4),
-        "grade": grading["grade"],
-        "score": grading["score"],
-        "reason": grading["reason"],
-        "detections": detections,
-        "inference_time_sec": elapsed
-    })
+        logger.info("File='%s' detections=%d grade=%s time=%.3fs",
+                    image_file.filename, len(detections), grading["grade"], elapsed)
+
+        return jsonify({
+            "filename": image_file.filename,
+            "count": len(detections),
+            "label_summary": label_summary,
+            "avg_confidence": round(avg_conf, 4),
+            "grade": grading["grade"],
+            "score": grading["score"],
+            "reason": grading["reason"],
+            "detections": detections,
+            "inference_time_sec": elapsed,
+        })
+
+    # HF Space returned an unexpected shape — forward it as-is so the caller
+    # can inspect it, but still attach our timing field.
+    hf_data.setdefault("filename", image_file.filename)
+    hf_data["inference_time_sec"] = elapsed
+    return jsonify(hf_data)
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860)
-```
-
-**Key improvements over original:**
-
-| Area | Before | After |
-|---|---|---|
-| **Temp file** | Saves to disk, manual cleanup | PIL reads directly from memory — no temp file |
-| **Validation** | Only checks key presence | Checks mimetype, extension, file size |
-| **Grading** | Count-only thresholds | Count + confidence scored 0–100 |
-| **Detections** | Just count | Label, confidence, bbox per object |
-| **Query params** | None | `?conf=0.3&top_k=5` supported |
-| **Label summary** | None | `{"person": 2, "car": 1}` |
-| **Timing** | None | `inference_time_sec` in response |
-| **New endpoints** | `/health` only | `/classes` added |
-
-**`requirements.txt`:**
-```
-flask
-flask-cors
-ultralytics
-pillow
-opencv-python-headless
