@@ -1,8 +1,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +13,6 @@ dotenv.config({ path: envPath });
 const supabaseUrl = process.env.SUPABASE_URL || 'https://tqopuaavwcyugmnhkmuq.supabase.co';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
 
-// Check if we have a valid Supabase key (should be a JWT starting with eyJ)
 const hasValidKey = supabaseKey && supabaseKey.startsWith('eyJ');
 
 if (!hasValidKey) {
@@ -23,8 +22,9 @@ if (!hasValidKey) {
   console.log('   URL:', supabaseUrl);
 }
 
-// In-memory storage for offline mode
-const memoryDB = {
+// ── In-memory storage for offline mode ───────────────────────────────────────
+
+export const memoryDB = {
   users: new Map(),
   analyses: new Map(),
   analysis_items: new Map(),
@@ -32,36 +32,31 @@ const memoryDB = {
   training_images: new Map()
 };
 
-// Generate IDs
-const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+const generateId = () =>
+  Math.random().toString(36).substring(2, 15) +
+  Math.random().toString(36).substring(2, 15);
 
-// Create demo user for offline mode (with proper bcrypt hash)
-const demoPasswordHash = await bcrypt.hash('demo123', 10);
-const demoUser = {
-  id: 'demo-user-001',
-  username: 'demo',
-  email: 'demo@kisanmitra.com',
-  password_hash: demoPasswordHash,
-  farmer_name: 'Demo Farmer',
-  location: 'India',
-  phone: '+91 98765 43210',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
+// Async init — no top-level await
+const initDemoUser = async () => {
+  const demoPasswordHash = await bcrypt.hash('demo123', 10);
+  const demoUser = {
+    id: 'demo-user-001',
+    username: 'demo',
+    email: 'demo@kisanmitra.com',
+    password_hash: demoPasswordHash,
+    farmer_name: 'Demo Farmer',
+    location: 'India',
+    phone: '+91 98765 43210',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  memoryDB.users.set(demoUser.id, demoUser);
 };
-memoryDB.users.set(demoUser.id, demoUser);
 
-/**
- * A fully chainable mock Supabase client for offline use.
- * Supports: .from().select().eq().single()
- *           .from().select().eq().limit()
- *           .from().select().eq().order().limit()
- *           .from().select().limit()
- *           .from().select().order().limit()
- *           .from().insert().select().single()
- *           .from().insert().select()
- *           .from().update().eq()
- *           .from().delete().eq()
- */
+initDemoUser().catch(console.error);
+
+// ── Mock Supabase client ──────────────────────────────────────────────────────
+
 const createMockClient = () => {
   const getTable = (table) => Array.from(memoryDB[table]?.values() || []);
 
@@ -110,10 +105,8 @@ const createMockClient = () => {
       },
       limit: (n) => { _limit = n; return executeQuery(); },
       single: () => { _single = true; return executeQuery(); },
-      then: (onFulfilled, onRejected) => {
-        // Support awaiting the chain directly (e.g. await supabase.from(...).select('*').eq(...).order(...))
-        return Promise.resolve({ data: applyFilters(), error: null }).then(onFulfilled, onRejected);
-      }
+      then: (onFulfilled, onRejected) =>
+        Promise.resolve({ data: applyFilters(), error: null }).then(onFulfilled, onRejected)
     };
 
     return chain;
@@ -140,12 +133,11 @@ const createMockClient = () => {
           return newItem;
         });
 
-        const insertResult = {
+        return {
           select: (columns = '*') => buildQuery(table, inserted),
           then: (onFulfilled, onRejected) =>
             Promise.resolve({ data: inserted, error: null }).then(onFulfilled, onRejected)
         };
-        return insertResult;
       },
 
       update: (data) => ({
@@ -165,9 +157,7 @@ const createMockClient = () => {
         eq: (col, val) => {
           const rows = getTable(table);
           const row = rows.find(r => r[col] === val);
-          if (row) {
-            memoryDB[table]?.delete(row.id);
-          }
+          if (row) memoryDB[table]?.delete(row.id);
           return Promise.resolve({ error: null });
         }
       })
@@ -189,18 +179,11 @@ const createMockClient = () => {
   };
 };
 
-// Use real Supabase if valid key, otherwise use mock
-let supabase;
-if (hasValidKey) {
-  const { createClient } = await import('@supabase/supabase-js');
-  supabase = createClient(
-    supabaseUrl,
-    supabaseKey,
-    { auth: { persistSession: false } }
-  );
-} else {
-  supabase = createMockClient();
-}
+// ── Export ────────────────────────────────────────────────────────────────────
 
-export { supabase, memoryDB };
+const supabase = hasValidKey
+  ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
+  : createMockClient();
+
+export { supabase };
 export default supabase;
