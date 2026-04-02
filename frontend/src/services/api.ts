@@ -20,9 +20,8 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // Let axios set Content-Type automatically for FormData
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
+      config.headers['Content-Type'] = 'multipart/form-data';
     }
     return config;
   },
@@ -38,7 +37,6 @@ api.interceptors.response.use(
       const { status } = error.response;
 
       if (status === 401) {
-        // Token expired or invalid — clear and redirect to login
         localStorage.removeItem('token');
         window.location.href = '/login';
       }
@@ -55,8 +53,10 @@ api.interceptors.response.use(
         return Promise.reject(new Error('Server error. Please try again later.'));
       }
 
-      // Return backend error message if available
-      const message = error.response.data?.error || error.response.data?.message || error.message;
+      const message =
+        error.response.data?.error ||
+        error.response.data?.message ||
+        error.message;
       return Promise.reject(new Error(message));
     }
 
@@ -151,4 +151,12 @@ export const uploadImage = (
 ): Promise<AxiosResponse<DetectionResult>> =>
   api.post('/analyze', formData, {
     onUploadProgress: (event) => {
-      if (onUploadProgress && event.total)
+      if (onUploadProgress && event.total) {
+        const percent = Math.round((event.loaded * 100) / event.total);
+        onUploadProgress(percent);
+      }
+    },
+  });
+
+export const getAnalysis = (analysisId: string): Promise<AxiosResponse<AnalysisResult>> =>
+  api.get(`/analysis/${analysisId}`);
