@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 
+// Find your User interface in authStore.ts and change to:
 interface User {
   id: string;
   username: string;
   email: string;
-  farmerName: string;
-  location: string;
-  phone?: string;
+  farmerName?: string;   // ← add ?
+  location?: string;     // ← add ?
+  phone?: string;        // ← add ?
+  role?: string;         // ← add ?
 }
 
 interface AuthState {
