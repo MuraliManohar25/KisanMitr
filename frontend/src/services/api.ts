@@ -80,6 +80,10 @@ export interface AuthResponse {
     id: string;
     username: string;
     email: string;
+    farmerName?: string;
+    location?: string;
+    phone?: string;
+    role?: string;
   };
 }
 
@@ -93,6 +97,7 @@ export interface RegisterPayload {
 }
 
 export interface DetectionResult {
+  analysisId?: string;
   filename: string;
   count: number;
   label_summary: Record<string, number>;
@@ -111,6 +116,12 @@ export interface DetectionResult {
 export interface AnalysisResult {
   analysisId: string;
   status: string;
+  cropType?: string;
+  farmerInfo?: {
+    name?: string;
+    location?: string;
+    phone?: string;
+  };
   result?: DetectionResult;
 }
 
