@@ -101,18 +101,20 @@ router.post('/', upload.single('image'), async (req, res, next) => {
     // 9. Cleanup original file (keep processed)
     await fs.unlink(imagePath).catch(console.error);
 
+    // ✅ new — analysisId explicitly at top, plus imageUrl and diseaseDetected for frontend
     res.json({
-      analysisId,
-      ...gradedResults,
+      analysisId,                                          // for Home.tsx navigate
+      cropType,                                            // for Certificate.tsx
+      farmerInfo: { name: farmerName, location, phone },  // for Certificate.tsx + Results.tsx
+      imageUrl: `/uploads/${path.basename(processedPath)}`,
+      diseaseDetected: detectedDisease,
+      recommendations,
       similarImages: similarImages?.similar || null,
       datasetInfo: similarImages ? {
         totalTrainingImages: similarImages.totalTrainingImages
-      } : null
+      } : null,
+      ...gradedResults,                                    // overallGrade, gradeDistribution, detectionResults
     });
-  } catch (error) {
-    next(error);
-  }
-});
 
 router.get('/:analysisId', async (req, res, next) => {
   try {
