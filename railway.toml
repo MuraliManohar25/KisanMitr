@@ -1,16 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install && npm run build"
 
 [deploy]
 startCommand = "./node_modules/.bin/serve -s dist -l $PORT"
 restartPolicyType = "ON_FAILURE"
-
-[build.nixpacksPlan]
-providers = ["node"]
-
-[build.nixpacksPlan.phases.install]
-cmds = ["npm install --legacy-peer-deps"]
-
-[build.nixpacksPlan.phases.build]
-cmds = ["npm run build"]
