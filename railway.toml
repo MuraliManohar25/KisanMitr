@@ -1,6 +1,5 @@
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "./node_modules/.bin/serve -s dist -l $PORT"
 restartPolicyType = "ON_FAILURE"
