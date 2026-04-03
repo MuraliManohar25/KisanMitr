@@ -203,7 +203,7 @@ export default function Results() {
           <div className="bg-white rounded-2xl p-6 shadow-farmer mb-6">
             <h3 className="font-heading text-xl font-bold text-forest mb-4">Harvest Image</h3>
             <img
-              src={`http://localhost:5000${analysis.imageUrl}`}
+              src={`http://https://kisanmitr.up.railway.app/${analysis.imageUrl}`}
               alt="Harvest"
               className="h-64 w-auto object-cover rounded-xl mx-auto shadow-md"
             />

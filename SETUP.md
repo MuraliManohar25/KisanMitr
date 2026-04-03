@@ -68,7 +68,7 @@ Runs on http://localhost:3000
 cd backend
 npm run dev
 ```
-Runs on http://localhost:5000
+Runs on http://https://kisanmitr.up.railway.app/
 
 **Terminal 3 - YOLO Service:**
 ```bash

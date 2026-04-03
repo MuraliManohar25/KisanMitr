@@ -201,7 +201,7 @@ export default function Certificate() {
             {analysis.imageUrl && (
               <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden border-2 border-light-gray shadow-sm">
                 <img
-                  src={`http://localhost:5000${analysis.imageUrl}`}
+                  src={`http://https://kisanmitr.up.railway.app/${analysis.imageUrl}`}
                   alt="Crop"
                   className="w-full h-full object-cover"
                 />

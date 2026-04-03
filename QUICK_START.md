@@ -72,7 +72,7 @@ npm run dev
 cd backend
 npm run dev
 ```
-→ http://localhost:5000
+→ http://https://kisanmitr.up.railway.app/
 
 **Terminal 3 - YOLO Service:**
 ```powershell

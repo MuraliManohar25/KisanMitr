@@ -33,7 +33,7 @@ echo ========================================
 echo.
 echo Services will open in separate windows:
 echo   • YOLO Service:    http://localhost:8000
-echo   • Backend API:     http://localhost:5000
+echo   • Backend API:     http://https://kisanmitr.up.railway.app/
 echo   • Frontend App:    http://localhost:3000
 echo.
 echo Open your browser to: http://localhost:3000

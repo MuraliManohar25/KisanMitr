@@ -42,7 +42,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Services will open in separate windows:" -ForegroundColor Yellow
 Write-Host "  • YOLO Service:    http://localhost:8000" -ForegroundColor White
-Write-Host "  • Backend API:     http://localhost:5000" -ForegroundColor White
+Write-Host "  • Backend API:     http://https://kisanmitr.up.railway.app/" -ForegroundColor White
 Write-Host "  • Frontend App:    http://localhost:3000" -ForegroundColor White
 Write-Host ""
 Write-Host "Open your browser to: http://localhost:3000" -ForegroundColor Green

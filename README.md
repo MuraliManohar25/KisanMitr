@@ -45,7 +45,7 @@ cp env.template .env
 npm run dev
 ```
 
-Backend will run on http://localhost:5000
+Backend will run on http://https://kisanmitr.up.railway.app/
 
 ### YOLO Service Setup
 
